@@ -2,11 +2,16 @@
 extern crate rocket;
 
 mod routes;
-use routes::hello_world;
+use routes::{fetch_data, hello_world};
+
+mod types;
+use types::TaskMap;
 
 #[launch]
 fn rocket() -> _ {
     println!("{}", "🚀 The server is ready to accept requests");
 
-    rocket::build().mount("/", routes![hello_world,])
+    rocket::build()
+        .manage(TaskMap::default())
+        .mount("/", routes![hello_world, fetch_data])
 }
