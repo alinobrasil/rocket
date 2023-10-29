@@ -16,3 +16,10 @@ pub struct TaskData {
     pub status: TaskStatus,
     pub data: Option<String>,
 }
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Log {
+    pub address: String,
+    pub data: String,
+    pub topics: Vec<String>,
+}

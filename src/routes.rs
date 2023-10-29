@@ -1,8 +1,18 @@
 use rocket::{http::Status, serde::json::Json, State};
+
 use serde::Serialize;
+use std::env;
+use std::error::Error;
 use tokio;
 
-use crate::types::{TaskData, TaskMap, TaskStatus};
+use dotenv::dotenv;
+use reqwest::{Client, Error as ReqwestError};
+use serde_json::Value;
+use std::sync::Arc;
+
+// use crate::chain_data::get_chain_data;
+
+use crate::types::{Log, TaskData, TaskMap, TaskStatus};
 
 #[derive(Serialize)]
 pub struct GenericResponse {
@@ -47,4 +57,98 @@ pub fn check_data(task_id: &str, map: &State<TaskMap>) -> Result<Json<TaskData>,
     } else {
         Err("Task not found".to_string()) // Error case
     }
+}
+
+pub async fn get_chain_data(
+    start_block: u64,
+    end_block: u64,
+    target_address: String,
+    client: &State<Arc<Client>>,
+) -> Result<Vec<Log>, Box<dyn Error>> {
+    let target_address = target_address.to_lowercase();
+
+    let mut handles = Vec::new();
+    let mut current_start = start_block;
+
+    while current_start <= end_block {
+        // Define the range for this batch
+        let batchsize = 3;
+        let current_end = std::cmp::min(current_start + (batchsize - 1), end_block);
+
+        println!(
+            "spawning task for blocks {} to {}",
+            current_start, current_end
+        );
+
+        let handle = tokio::task::spawn(fetch_logs_from_blocks(
+            block_to_hex(current_start).to_string(),
+            block_to_hex(current_end).to_string(),
+            client,
+        ));
+        handles.push(handle);
+
+        current_start += batchsize;
+    }
+
+    let mut matching_logs = Vec::new();
+
+    // Await on the handles to get the results
+    for handle in handles {
+        match handle.await {
+            Ok(Ok(logs)) => {
+                // Filter logs based on the specified address and collect them
+                let filtered_logs: Vec<_> = logs
+                    .into_iter()
+                    .filter(|log| log.address == target_address)
+                    .collect();
+
+                matching_logs.extend(filtered_logs.clone());
+                println!("# matching entries: {}", filtered_logs.len());
+            }
+            Ok(Err(e)) => {
+                println!("Error fetching logs: {}", e);
+                return Err(Box::new(e));
+            }
+            Err(e) => {
+                println!("Task error: {}", e);
+                return Err(Box::new(e));
+            }
+        }
+    }
+
+    Ok(matching_logs)
+}
+
+async fn fetch_logs_from_blocks(
+    start_block: String,
+    end_block: String,
+    client: Arc<Client>,
+) -> Result<Vec<Log>, ReqwestError> {
+    let payload = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_getLogs",
+        "params": [{
+            "fromBlock": start_block,
+            "toBlock": end_block
+        }]
+    });
+
+    dotenv().ok();
+
+    // let client = reqwest::Client::new();
+    let infura_url = env::var("INFURA_URL").expect("INFURA_URL must be set");
+    let res: Response = client
+        .post(&infura_url)
+        .json(&payload)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    Ok(res.result)
+}
+
+fn block_to_hex(block: u64) -> String {
+    format!("0x{:x}", block)
 }
