@@ -23,3 +23,10 @@ pub struct Log {
     pub data: String,
     pub topics: Vec<String>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct Response {
+    pub jsonrpc: String,
+    pub id: u32,
+    pub result: Vec<Log>,
+}

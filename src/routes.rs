@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 // use crate::chain_data::get_chain_data;
 
-use crate::types::{Log, TaskData, TaskMap, TaskStatus};
+use crate::types::{Log, Response, TaskData, TaskMap, TaskStatus};
 
 #[derive(Serialize)]
 pub struct GenericResponse {
@@ -31,10 +31,11 @@ pub fn hello_world() -> Result<Json<GenericResponse>, Status> {
 }
 
 #[get("/fetch_data")]
-pub fn fetch_data(map: &State<TaskMap>) -> String {
+pub fn fetch_data(map: &State<TaskMap>, client: &State<Arc<Client>>) -> String {
     let task_id = uuid::Uuid::new_v4().to_string();
 
     let task_id2 = task_id.clone();
+    let client_clone = client.inner().clone();
 
     let map = map.inner().clone();
     tokio::spawn(async move {
@@ -43,6 +44,13 @@ pub fn fetch_data(map: &State<TaskMap>) -> String {
             data: None,
         };
         map.lock().unwrap().insert(task_id2, data);
+
+        let chain_data = get_chain_data(
+            18277200,
+            18277208,
+            "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2".to_string(),
+            &client_clone,
+        );
     });
 
     task_id
@@ -63,7 +71,7 @@ pub async fn get_chain_data(
     start_block: u64,
     end_block: u64,
     target_address: String,
-    client: &State<Arc<Client>>,
+    client: <Arc<Client>>,
 ) -> Result<Vec<Log>, Box<dyn Error>> {
     let target_address = target_address.to_lowercase();
 
@@ -80,10 +88,12 @@ pub async fn get_chain_data(
             current_start, current_end
         );
 
+        let client_clone = Arc::clone(client.inner());
+
         let handle = tokio::task::spawn(fetch_logs_from_blocks(
             block_to_hex(current_start).to_string(),
             block_to_hex(current_end).to_string(),
-            client,
+            client_clone,
         ));
         handles.push(handle);
 
