@@ -14,7 +14,7 @@ pub enum TaskStatus {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TaskData {
     pub status: TaskStatus,
-    pub data: Option<String>,
+    pub data: Option<Vec<Log>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

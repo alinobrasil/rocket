@@ -35,6 +35,8 @@ pub fn fetch_data(map: &State<TaskMap>, client: &State<Arc<Client>>) -> String {
     let task_id = uuid::Uuid::new_v4().to_string();
 
     let task_id2 = task_id.clone();
+    let task_id3 = task_id.clone();
+
     let client_clone = client.inner().clone();
 
     let map = map.inner().clone();
@@ -43,14 +45,47 @@ pub fn fetch_data(map: &State<TaskMap>, client: &State<Arc<Client>>) -> String {
             status: TaskStatus::InProgress,
             data: None,
         };
-        map.lock().unwrap().insert(task_id2, data);
+        let res = match map.lock() {
+            Ok(mut m) => {
+                println!("Got lock!");
+                m.insert(task_id2, data);
+            }
+            Err(e) => {
+                println!("Failed to get lock {:?}", e);
+            }
+        };
 
-        let chain_data = get_chain_data(
+        // .unwrap().insert(task_id2, data);
+
+        let chain_data: Result<Vec<Log>, Box<dyn Error>> = get_chain_data(
             18277200,
             18277208,
             "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2".to_string(),
-            &client_clone,
-        );
+            client_clone,
+        )
+        .await;
+        // println!("task_id2: {}", task_id2);
+
+        let response = match map.lock() {
+            Ok(mut m) => {
+                println!("Got lock! to write data");
+                let task_entry = m.get_mut(&task_id3).unwrap();
+                task_entry.status = TaskStatus::Completed;
+                // data.data = Some(chain_data);
+                match (chain_data) {
+                    Ok(data) => {
+                        task_entry.data = Some(data);
+                        println!("task_entry.data: {:?}", task_entry.data);
+                    }
+                    Err(e) => {
+                        task_entry.status = TaskStatus::Error;
+                    }
+                }
+            }
+            Err(e) => {
+                println!("Failed to get lock {:?}", e);
+            }
+        };
     });
 
     task_id
@@ -71,8 +106,10 @@ pub async fn get_chain_data(
     start_block: u64,
     end_block: u64,
     target_address: String,
-    client: <Arc<Client>>,
+    client: Arc<Client>,
 ) -> Result<Vec<Log>, Box<dyn Error>> {
+    println!("Starting get_chain_data");
+
     let target_address = target_address.to_lowercase();
 
     let mut handles = Vec::new();
@@ -88,7 +125,7 @@ pub async fn get_chain_data(
             current_start, current_end
         );
 
-        let client_clone = Arc::clone(client.inner());
+        let client_clone = client.clone();
 
         let handle = tokio::task::spawn(fetch_logs_from_blocks(
             block_to_hex(current_start).to_string(),
@@ -127,6 +164,7 @@ pub async fn get_chain_data(
     }
 
     Ok(matching_logs)
+    // should store these into mutex hashmap
 }
 
 async fn fetch_logs_from_blocks(
@@ -144,7 +182,7 @@ async fn fetch_logs_from_blocks(
         }]
     });
 
-    dotenv().ok();
+    // dotenv().ok();
 
     // let client = reqwest::Client::new();
     let infura_url = env::var("INFURA_URL").expect("INFURA_URL must be set");

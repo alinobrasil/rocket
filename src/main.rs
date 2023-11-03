@@ -8,11 +8,13 @@ use routes::{check_data, fetch_data, hello_world};
 use std::sync::Arc;
 
 mod types;
+use dotenv::dotenv;
 use types::TaskMap;
 
 #[launch]
 fn rocket() -> _ {
     println!("{}", "🚀 The server is ready to accept requests");
+    dotenv().expect("Cannot load env");
 
     let reqwestClient = Arc::new(reqwest::Client::new());
 
