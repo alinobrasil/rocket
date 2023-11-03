@@ -5,9 +5,8 @@ use std::env;
 use std::error::Error;
 use tokio;
 
-use dotenv::dotenv;
 use reqwest::{Client, Error as ReqwestError};
-use serde_json::Value;
+// use serde_json::Value;
 use std::sync::Arc;
 
 // use crate::chain_data::get_chain_data;
@@ -30,8 +29,23 @@ pub fn hello_world() -> Result<Json<GenericResponse>, Status> {
     Ok(Json(response))
 }
 
-#[get("/fetch_data")]
-pub fn fetch_data(map: &State<TaskMap>, client: &State<Arc<Client>>) -> String {
+#[get("/fetch_data?<block_start>&<block_end>&<contract_address>")]
+pub fn fetch_data(
+    block_start: Option<u64>,         // Optional query parameter
+    block_end: Option<u64>,           // Optional query parameter
+    contract_address: Option<String>, // Optional query parameter
+    map: &State<TaskMap>,
+    client: &State<Arc<Client>>,
+) -> String {
+    let _block_start = block_start.unwrap_or(18277200); // Provide default value here
+    let _block_end = block_end.unwrap_or(18277300); // Provide default value here
+    let _contract_address = contract_address
+        .unwrap_or_else(|| "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2".to_string()); // Provide default value here
+
+    println!("block_start: {}", _block_start);
+    println!("block_end: {}", _block_end);
+    println!("contract_address: {}", _contract_address);
+
     let task_id = uuid::Uuid::new_v4().to_string();
 
     let task_id2 = task_id.clone();
@@ -57,13 +71,8 @@ pub fn fetch_data(map: &State<TaskMap>, client: &State<Arc<Client>>) -> String {
 
         // .unwrap().insert(task_id2, data);
 
-        let chain_data: Result<Vec<Log>, Box<dyn Error>> = get_chain_data(
-            18277200,
-            18277208,
-            "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2".to_string(),
-            client_clone,
-        )
-        .await;
+        let chain_data: Result<Vec<Log>, Box<dyn Error>> =
+            get_chain_data(_block_start, _block_end, _contract_address, client_clone).await;
         // println!("task_id2: {}", task_id2);
 
         let response = match map.lock() {
@@ -75,7 +84,7 @@ pub fn fetch_data(map: &State<TaskMap>, client: &State<Arc<Client>>) -> String {
                 match (chain_data) {
                     Ok(data) => {
                         task_entry.data = Some(data);
-                        println!("task_entry.data: {:?}", task_entry.data);
+                        println!("task_entry data saved");
                     }
                     Err(e) => {
                         task_entry.status = TaskStatus::Error;
@@ -91,11 +100,13 @@ pub fn fetch_data(map: &State<TaskMap>, client: &State<Arc<Client>>) -> String {
     task_id
 }
 
-#[get("/check_data/<task_id>")]
-pub fn check_data(task_id: &str, map: &State<TaskMap>) -> Result<Json<TaskData>, String> {
+#[get("/check_data?<task_id>")]
+pub fn check_data(task_id: Option<String>, map: &State<TaskMap>) -> Result<Json<TaskData>, String> {
+    let _task_id = task_id.unwrap_or_else(|| "invalid string".to_string());
+
     let map = map.inner().lock().unwrap();
 
-    if let Some(data) = map.get(task_id) {
+    if let Some(data) = map.get(&_task_id) {
         Ok(Json(data.clone())) // Successful match, wrapped in Json
     } else {
         Err("Task not found".to_string()) // Error case
