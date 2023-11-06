@@ -1,7 +1,9 @@
+use rocket::request::{self, FromRequest, Request};
 use rocket::{http::Status, serde::json::Json, State};
+use std::env;
 
 use serde::Serialize;
-use std::env;
+
 use std::error::Error;
 use tokio;
 
@@ -19,8 +21,36 @@ pub struct GenericResponse {
     pub message: String,
 }
 
+pub struct ApiKey(String);
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for ApiKey {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+        // dotenv().ok();
+
+        // Retrieve the KEYS environment variable and split it into individual keys
+        let api_keys = env::var("KEYS").unwrap_or_default();
+        let valid_keys: Vec<_> = api_keys.split(',').collect();
+
+        // Check the request for the "x-api-key" header
+        match request.headers().get_one("x-api-key") {
+            Some(provided_key) => {
+                // Check if the provided key is in the list of valid keys
+                if valid_keys.contains(&provided_key) {
+                    request::Outcome::Success(ApiKey(provided_key.to_string()))
+                } else {
+                    request::Outcome::Failure((Status::Forbidden, ()))
+                }
+            }
+            None => request::Outcome::Failure((Status::Forbidden, ())),
+        }
+    }
+}
+
 #[get("/hello_world")]
-pub fn hello_world() -> Result<Json<GenericResponse>, Status> {
+pub fn hello_world(_api_key: ApiKey) -> Result<Json<GenericResponse>, Status> {
     let response = GenericResponse {
         status: "success".to_string(),
         message: "Hello, world!".to_string(),
@@ -31,6 +61,7 @@ pub fn hello_world() -> Result<Json<GenericResponse>, Status> {
 
 #[get("/fetch_data?<block_start>&<block_end>&<contract_address>")]
 pub fn fetch_data(
+    _api_key: ApiKey,
     block_start: Option<u64>,         // Optional query parameter
     block_end: Option<u64>,           // Optional query parameter
     contract_address: Option<String>, // Optional query parameter
