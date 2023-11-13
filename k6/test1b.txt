@@ -1,0 +1,120 @@
+no issues in the back
+a2k@A2K:~/dev/rust/api2/k6$ k6 run 1-concurrentUsers.js --duration 5s
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: 1-concurrentUsers.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 1 max VUs, 35s max duration (incl. graceful stop):
+           * default: 1 looping VUs for 5s (gracefulStop: 30s)
+
+
+     data_received..................: 1.4 kB 270 B/s
+     data_sent......................: 730 B  146 B/s
+     http_req_blocked...............: avg=38.21µs min=9.43µs   med=12.04µs  max=145.34µs p(90)=92.54µs  p(95)=118.94µs
+     http_req_connecting............: avg=19.1µs  min=0s       med=0s       max=95.5µs   p(90)=57.3µs   p(95)=76.4µs  
+     http_req_duration..............: avg=2.08ms  min=773.9µs  med=2.39ms   max=2.81ms   p(90)=2.65ms   p(95)=2.73ms  
+       { expected_response:true }...: avg=2.08ms  min=773.9µs  med=2.39ms   max=2.81ms   p(90)=2.65ms   p(95)=2.73ms  
+     http_req_failed................: 0.00%  ✓ 0        ✗ 5  
+     http_req_receiving.............: avg=138.3µs min=43.6µs   med=172.17µs max=192.01µs p(90)=186.21µs p(95)=189.11µs
+     http_req_sending...............: avg=50.49µs min=34.2µs   med=49.61µs  max=65.87µs  p(90)=60.96µs  p(95)=63.41µs 
+     http_req_tls_handshaking.......: avg=0s      min=0s       med=0s       max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=1.89ms  min=680.68µs med=2.16ms   max=2.58ms   p(90)=2.42ms   p(95)=2.5ms   
+     http_reqs......................: 5      0.996756/s
+     iteration_duration.............: avg=1s      min=1s       med=1s       max=1s       p(90)=1s       p(95)=1s      
+     iterations.....................: 5      0.996756/s
+     vus............................: 1      min=1      max=1
+     vus_max........................: 1      min=1      max=1
+
+
+
+10 users-----------------------------------------------------------------------------
+backend takes significnatly longer to finish tasks
+
+a2k@A2K:~/dev/rust/api2/k6$ k6 run 1-concurrentUsers.js --duration 5s --vus 10
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: 1-concurrentUsers.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 10 max VUs, 35s max duration (incl. graceful stop):
+           * default: 10 looping VUs for 5s (gracefulStop: 30s)
+
+
+     data_received..................: 14 kB  2.7 kB/s
+     data_sent......................: 7.3 kB 1.4 kB/s
+     http_req_blocked...............: avg=36.03µs min=2.3µs    med=8.25µs  max=188.6µs  p(90)=145.3µs  p(95)=174.39µs
+     http_req_connecting............: avg=18.16µs min=0s       med=0s      max=140.74µs p(90)=85.04µs  p(95)=111.78µs
+     http_req_duration..............: avg=6.57ms  min=601.96µs med=1.62ms  max=27.26ms  p(90)=22.52ms  p(95)=26.52ms 
+       { expected_response:true }...: avg=6.57ms  min=601.96µs med=1.62ms  max=27.26ms  p(90)=22.52ms  p(95)=26.52ms 
+     http_req_failed................: 0.00%  ✓ 0        ✗ 50  
+     http_req_receiving.............: avg=87.84µs min=14.66µs  med=54.56µs max=485.75µs p(90)=150.34µs p(95)=183.08µs
+     http_req_sending...............: avg=32.45µs min=8.92µs   med=33.28µs max=88.39µs  p(90)=49.12µs  p(95)=55.99µs 
+     http_req_tls_handshaking.......: avg=0s      min=0s       med=0s      max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=6.45ms  min=543.45µs med=1.57ms  max=27.08ms  p(90)=22.31ms  p(95)=26.31ms 
+     http_reqs......................: 50     9.892765/s
+     iteration_duration.............: avg=1s      min=1s       med=1s      max=1.02s    p(90)=1.02s    p(95)=1.02s   
+     iterations.....................: 50     9.892765/s
+     vus............................: 10     min=10     max=10
+     vus_max........................: 10     min=10     max=10
+
+
+running (05.1s), 00/10 VUs, 50 complete and 0 interrupted iterations
+
+
+100 users -----------------------------------------------
+backend sees many errors:
+Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): error trying to connect: dns error: Device or resource busy (os error 16)
+(seems like too many to handle)
+
+Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): error trying to connect: Connection reset by peer (os error 104)
+(seems like alchemy rate limit)
+
+a2k@A2K:~/dev/rust/api2/k6$ k6 run 1-concurrentUsers.js --duration 5s --vus 100
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: 1-concurrentUsers.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 100 max VUs, 35s max duration (incl. graceful stop):
+           * default: 100 looping VUs for 5s (gracefulStop: 30s)
+
+
+     data_received..................: 136 kB 22 kB/s
+     data_sent......................: 73 kB  12 kB/s
+     http_req_blocked...............: avg=77.3µs   min=1.33µs   med=5.53µs  max=1.68ms   p(90)=229.2µs  p(95)=448.7µs 
+     http_req_connecting............: avg=38.74µs  min=0s       med=0s      max=699.65µs p(90)=131.33µs p(95)=299.89µs
+     http_req_duration..............: avg=158.73ms min=581.57µs med=55.04ms max=849.2ms  p(90)=502.99ms p(95)=624.73ms
+       { expected_response:true }...: avg=158.73ms min=581.57µs med=55.04ms max=849.2ms  p(90)=502.99ms p(95)=624.73ms
+     http_req_failed................: 0.00%  ✓ 0        ✗ 500  
+     http_req_receiving.............: avg=53.36µs  min=16.48µs  med=43.83µs max=264.44µs p(90)=99.04µs  p(95)=129.31µs
+     http_req_sending...............: avg=49.43µs  min=5.08µs   med=19.88µs max=798.24µs p(90)=134.65µs p(95)=296.63µs
+     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s      max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=158.62ms min=521.23µs med=54.96ms max=849.13ms p(90)=502.86ms p(95)=624.62ms
+     http_reqs......................: 500    79.53618/s
+     iteration_duration.............: avg=1.15s    min=1s       med=1.05s   max=1.84s    p(90)=1.5s     p(95)=1.62s   
+     iterations.....................: 500    79.53618/s
+     vus............................: 35     min=35     max=100
+     vus_max........................: 100    min=100    max=100
+
+
+running (06.3s), 000/100 VUs, 500 complete and 0 interrupted iterations
+default ✓ [======================================] 100 VUs  5s

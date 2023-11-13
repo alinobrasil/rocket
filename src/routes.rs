@@ -68,14 +68,21 @@ pub fn fetch_data(
     map: &State<TaskMap>,
     client: &State<Arc<Client>>,
 ) -> String {
-    let _block_start = block_start.unwrap_or(18277200); // Provide default value here
-    let _block_end = block_end.unwrap_or(18277300); // Provide default value here
+    // println!("\n***RAW block_start: {:?} \n", block_start);
+    // println!("\n***RAW block_end: {:?} \n", block_end);
+
+    //     let _block_start = block_start.unwrap_or(18277200); // Provide default value here
+    //     let _block_end = block_end.unwrap_or(18277300); // Provide default value here
+
+    let _block_start = block_start.unwrap_or_else(|| 182770000);
+    let _block_end = block_end.unwrap_or_else(|| 182770010);
+
     let _contract_address = contract_address
         .unwrap_or_else(|| "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2".to_string()); // Provide default value here
 
-    println!("block_start: {}", _block_start);
-    println!("block_end: {}", _block_end);
-    println!("contract_address: {}", _contract_address);
+    // println!("block_start: {}", _block_start);
+    // println!("block_end: {}", _block_end);
+    // println!("contract_address: {}", _contract_address);
 
     let task_id = uuid::Uuid::new_v4().to_string();
 
@@ -162,10 +169,10 @@ pub async fn get_chain_data(
         let batchsize = 3;
         let current_end = std::cmp::min(current_start + (batchsize - 1), end_block);
 
-        println!(
-            "spawning task for blocks {} to {}",
-            current_start, current_end
-        );
+        // println!(
+        //     "spawning task for blocks {} to {}",
+        //     current_start, current_end
+        // );
 
         let client_clone = client.clone();
 

@@ -1,0 +1,147 @@
+a2k@A2K:~/dev/rust/api2/k6$ k6 run 2-moreBlocks.js --duration 10s
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: 2-moreBlocks.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 1 max VUs, 40s max duration (incl. graceful stop):
+           * default: 1 looping VUs for 10s (gracefulStop: 30s)
+
+
+     data_received..................: 2.7 kB 270 B/s
+     data_sent......................: 1.5 kB 146 B/s
+     http_req_blocked...............: avg=26.2µs   min=3.08µs   med=10.4µs   max=191.07µs p(90)=30.19µs  p(95)=110.63µs
+     http_req_connecting............: avg=9.87µs   min=0s       med=0s       max=98.78µs  p(90)=9.87µs   p(95)=54.32µs 
+     http_req_duration..............: avg=1.88ms   min=624.24µs med=1.67ms   max=3.57ms   p(90)=3.18ms   p(95)=3.37ms  
+       { expected_response:true }...: avg=1.88ms   min=624.24µs med=1.67ms   max=3.57ms   p(90)=3.18ms   p(95)=3.37ms  
+     http_req_failed................: 0.00%  ✓ 0        ✗ 10 
+     http_req_receiving.............: avg=114.18µs min=44.72µs  med=107.34µs max=181.67µs p(90)=180.16µs p(95)=180.92µs
+     http_req_sending...............: avg=38.56µs  min=10.11µs  med=44.59µs  max=81.63µs  p(90)=61.84µs  p(95)=71.73µs 
+     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s       max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=1.73ms   min=565.5µs  med=1.54ms   max=3.34ms   p(90)=2.95ms   p(95)=3.15ms  
+     http_reqs......................: 10     0.997389/s
+     iteration_duration.............: avg=1s       min=1s       med=1s       max=1s       p(90)=1s       p(95)=1s      
+     iterations.....................: 10     0.997389/s
+     vus............................: 1      min=1      max=1
+     vus_max........................: 1      min=1      max=1
+
+
+running (10.0s), 0/1 VUs, 10 complete and 0 interrupted iterations
+default ✓ [======================================] 1 VUs  10s
+
+-----------------
+try http://localhost:8000/fetch_data?block_start=18530000&block_end=18531000
+1k blocks
+
+works, but getting rate limited
+Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): error trying to connect: Connection reset by peer (os error 104)
+
+tasks initiation not an issue:
+a2k@A2K:~/dev/rust/api2/k6$ k6 run 2-moreBlocks.js --duration 10s
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: 2-moreBlocks.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 1 max VUs, 40s max duration (incl. graceful stop):
+           * default: 1 looping VUs for 10s (gracefulStop: 30s)
+
+
+     data_received..................: 2.7 kB 271 B/s
+     data_sent......................: 1.5 kB 146 B/s
+     http_req_blocked...............: avg=15.97µs  min=2.72µs   med=3.88µs   max=120.13µs p(90)=20.86µs  p(95)=70.49µs 
+     http_req_connecting............: avg=7.13µs   min=0s       med=0s       max=71.37µs  p(90)=7.13µs   p(95)=39.25µs 
+     http_req_duration..............: avg=861.33µs min=542.22µs med=806.77µs max=1.52ms   p(90)=1.1ms    p(95)=1.31ms  
+       { expected_response:true }...: avg=861.33µs min=542.22µs med=806.77µs max=1.52ms   p(90)=1.1ms    p(95)=1.31ms  
+     http_req_failed................: 0.00%  ✓ 0        ✗ 10 
+     http_req_receiving.............: avg=66.42µs  min=36.16µs  med=45.29µs  max=135.59µs p(90)=128.67µs p(95)=132.13µs
+     http_req_sending...............: avg=26.42µs  min=11.42µs  med=17.64µs  max=72.4µs   p(90)=45.3µs   p(95)=58.85µs 
+     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s       max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=768.48µs min=488.8µs  med=728.53µs max=1.35ms   p(90)=969.58µs p(95)=1.16ms  
+     http_reqs......................: 10     0.998265/s
+     iteration_duration.............: avg=1s       min=1s       med=1s       max=1s       p(90)=1s       p(95)=1s      
+     iterations.....................: 10     0.998265/s
+     vus............................: 1      min=1      max=1
+     vus_max........................: 1      min=1      max=1
+
+
+
+-------------------------------------------
+
+Try http://localhost:8000/fetch_data?block_start=18530000&block_end=18535000
+5k blocks
+
+start getting issues:
+Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): error trying to connect: tcp open error: Too many open files (os error 24)
+Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): error trying to connect: dns error: Device or resource busy (os error 16)
+Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): error trying to connect: Connection reset by peer (os error 104)
+
+a2k@A2K:~/dev/rust/api2/k6$ k6 run 2-moreBlocks.js --duration 10s
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: 2-moreBlocks.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 1 max VUs, 40s max duration (incl. graceful stop):
+           * default: 1 looping VUs for 10s (gracefulStop: 30s)
+
+
+     data_received..................: 2.7 kB 264 B/s
+     data_sent......................: 1.5 kB 142 B/s
+     http_req_blocked...............: avg=114.37µs min=3.88µs   med=7.72µs  max=641.15µs p(90)=467.7µs  p(95)=554.43µs
+     http_req_connecting............: avg=13.48µs  min=0s       med=0s      max=134.81µs p(90)=13.48µs  p(95)=74.14µs 
+     http_req_duration..............: avg=24.7ms   min=799.28µs med=2.23ms  max=155.15ms p(90)=84.04ms  p(95)=119.6ms 
+       { expected_response:true }...: avg=24.7ms   min=799.28µs med=2.23ms  max=155.15ms p(90)=84.04ms  p(95)=119.6ms 
+     http_req_failed................: 0.00%  ✓ 0        ✗ 10 
+     http_req_receiving.............: avg=72.57µs  min=41.06µs  med=56.69µs max=133.04µs p(90)=121.93µs p(95)=127.49µs
+     http_req_sending...............: avg=29.39µs  min=16.91µs  med=31.5µs  max=39.53µs  p(90)=39.24µs  p(95)=39.39µs 
+     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s      max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=24.6ms   min=721.35µs med=2.15ms  max=155.08ms p(90)=83.98ms  p(95)=119.53ms
+     http_reqs......................: 10     0.974925/s
+     iteration_duration.............: avg=1.02s    min=1s       med=1s      max=1.15s    p(90)=1.08s    p(95)=1.12s   
+     iterations.....................: 10     0.974925/s
+     vus............................: 1      min=1      max=1
+     vus_max........................: 1      min=1      max=1
+
+
+-------------------------
+
+rate limit issue: Will need to set a max number of active tasks/workers using the reqwest client
+each task must wait until they get a turn. 
+Maybe use mutex?
+
+same with the other two issues:
+-tcp open error: Too many open files (os error 24)
+-error trying to connect: dns error: Device or resource busy (os error 16)
+
+attempts to do API calls should be restricted (eg. 10 active at a time)
+
+and also, some sort of cache. if request includes a certain block range, obtain from cache first, before caling API. 
+or use a db. check first. if not available, obtain via api
+
+
+
+
+-------------------------------------------------
+
+
+
+
