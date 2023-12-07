@@ -22,6 +22,7 @@ pub struct Log {
     pub address: String,
     pub data: String,
     pub topics: Vec<String>,
+    pub blockNumber: String, //added block number for easier hashmap management
 }
 
 #[derive(Debug, Deserialize)]

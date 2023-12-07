@@ -231,9 +231,10 @@ async fn fetch_logs_from_blocks(
         }]
     });
 
-    // dotenv().ok();
+    // TODO: Check if these blocks exist in cache.
+    // if so, return Vec<Log> from cache.
+    // if not, continue below and add them to cache. return cache value.
 
-    // let client = reqwest::Client::new();
     let infura_url = env::var("INFURA_URL").expect("INFURA_URL must be set");
     let res: Response = client
         .post(&infura_url)
