@@ -247,6 +247,52 @@ async fn fetch_logs_from_blocks(
         }]
     });
 
+    // todo: check if all target blocks are in cache
+    // if so, return cached data
+    // otherwise, make the api calls to Infura
+
+    let mut all_blocks_cached = true;
+    let mut cached_logs: Vec<Log> = Vec::new();
+
+    //scope to limit duration of lock
+    {
+        let cache_map = cache.lock().unwrap();
+
+        println!(
+            "\nChecking cache for blocks {} to {}",
+            start_block, end_block
+        );
+
+        let start_block_num = u64::from_str_radix(start_block.trim_start_matches("0x"), 16)
+            .expect("Failed to parse start block number");
+        let end_block_num = u64::from_str_radix(end_block.trim_start_matches("0x"), 16)
+            .expect("Failed to parse end block number");
+
+        for block in start_block_num..=end_block_num {
+            let block_hex = block_to_hex(block);
+            match cache_map.get(&block_hex) {
+                Some(logs) => {
+                    println!("Found logs for block {} in cache", block_hex);
+                    cached_logs.extend(logs.clone());
+                }
+                None => {
+                    println!("No logs found for block {}", block_hex);
+                    all_blocks_cached = false;
+                    break;
+                }
+            }
+        }
+    }
+
+    if all_blocks_cached {
+        return Ok(cached_logs);
+    }
+
+    // if not all blocks are cached, go fetch
+    println!(
+        "\nFetching logs from Infura for blocks {} to {}",
+        start_block, end_block
+    );
     let infura_url = env::var("INFURA_URL").expect("INFURA_URL must be set");
     let res: Response = client
         .post(&infura_url)
@@ -256,7 +302,7 @@ async fn fetch_logs_from_blocks(
         .json()
         .await?;
 
-    // put results into cache hashmap
+    // put fetched results into cache hashmap
     let logs = res.result.clone();
     let mut grouped_logs: HashMap<String, Vec<Log>> = HashMap::new();
 
@@ -289,12 +335,10 @@ pub fn check_cache(
     let block_number_hex = block_to_hex(block_number.parse::<u64>().unwrap());
 
     let cache_map = cache.inner().lock().unwrap();
-    let keys: Vec<_> = cache_map.keys().cloned().collect();
-    // drop(cache_map);
-    let keys_str = keys.join(", ");
-    println!("Cache keys: {}", keys_str);
 
-    // print!("cache_map: {:?}", cache_map);
+    let keys: Vec<_> = cache_map.keys().cloned().collect();
+    let keys_str = keys.join(", ");
+    println!("Cached blocks: {}", keys_str);
 
     match cache_map.get(&block_number_hex) {
         Some(logs) => Ok(Json(logs.clone())),
