@@ -4,12 +4,12 @@ extern crate rocket;
 use reqwest;
 
 mod routes;
-use routes::{check_data, fetch_data, hello_world};
+use routes::{check_cache, check_data, fetch_data, hello_world};
 use std::sync::Arc;
 
 mod types;
 use dotenv::dotenv;
-use types::TaskMap;
+use types::{CacheMap, TaskMap};
 
 #[launch]
 fn rocket() -> _ {
@@ -21,5 +21,9 @@ fn rocket() -> _ {
     rocket::build()
         .manage(TaskMap::default())
         .manage(reqwestClient)
-        .mount("/", routes![hello_world, fetch_data, check_data])
+        .manage(CacheMap::default())
+        .mount(
+            "/",
+            routes![hello_world, fetch_data, check_data, check_cache],
+        )
 }

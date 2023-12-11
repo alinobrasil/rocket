@@ -76,10 +76,12 @@ running (05.1s), 00/10 VUs, 50 complete and 0 interrupted iterations
 
 100 users -----------------------------------------------
 backend sees many errors:
-Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): error trying to connect: dns error: Device or resource busy (os error 16)
+Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): 
+error trying to connect: dns error: Device or resource busy (os error 16)
 (seems like too many to handle)
 
-Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): error trying to connect: Connection reset by peer (os error 104)
+Error fetching logs: error sending request for url (https://eth-mainnet.g.alchemy.com/v2/84GnvlKF-rAfskHdmivKpipIoSLF033I): 
+error trying to connect: Connection reset by peer (os error 104)
 (seems like alchemy rate limit)
 
 a2k@A2K:~/dev/rust/api2/k6$ k6 run 1-concurrentUsers.js --duration 5s --vus 100

@@ -13,7 +13,9 @@ use std::sync::Arc;
 
 // use crate::chain_data::get_chain_data;
 
-use crate::types::{Log, Response, TaskData, TaskMap, TaskStatus};
+use crate::types::{CacheMap, Log, Response, TaskData, TaskMap, TaskStatus};
+
+use std::collections::HashMap;
 
 #[derive(Serialize)]
 pub struct GenericResponse {
@@ -62,11 +64,12 @@ pub fn hello_world(_api_key: ApiKey) -> Result<Json<GenericResponse>, Status> {
 #[get("/fetch_data?<block_start>&<block_end>&<contract_address>")]
 pub fn fetch_data(
     _api_key: ApiKey,
-    block_start: Option<u64>,         // Optional query parameter
-    block_end: Option<u64>,           // Optional query parameter
-    contract_address: Option<String>, // Optional query parameter
+    block_start: Option<u64>,
+    block_end: Option<u64>,
+    contract_address: Option<String>,
     map: &State<TaskMap>,
     client: &State<Arc<Client>>,
+    cache: &State<CacheMap>,
 ) -> String {
     // println!("\n***RAW block_start: {:?} \n", block_start);
     // println!("\n***RAW block_end: {:?} \n", block_end);
@@ -90,14 +93,17 @@ pub fn fetch_data(
     let task_id3 = task_id.clone();
 
     let client_clone = client.inner().clone();
+    let cache_clone = cache.inner().clone();
 
     let map = map.inner().clone();
+
     tokio::spawn(async move {
         let data = TaskData {
             status: TaskStatus::InProgress,
             data: None,
         };
-        let res = match map.lock() {
+
+        match map.lock() {
             Ok(mut m) => {
                 println!("Got lock!");
                 m.insert(task_id2, data);
@@ -109,17 +115,23 @@ pub fn fetch_data(
 
         // .unwrap().insert(task_id2, data);
 
-        let chain_data: Result<Vec<Log>, Box<dyn Error>> =
-            get_chain_data(_block_start, _block_end, _contract_address, client_clone).await;
+        let chain_data: Result<Vec<Log>, Box<dyn Error>> = get_chain_data(
+            _block_start,
+            _block_end,
+            _contract_address,
+            client_clone,
+            cache_clone,
+        )
+        .await;
         // println!("task_id2: {}", task_id2);
 
-        let response = match map.lock() {
+        match map.lock() {
             Ok(mut m) => {
                 println!("Got lock! to write data");
                 let task_entry = m.get_mut(&task_id3).unwrap();
                 task_entry.status = TaskStatus::Completed;
                 // data.data = Some(chain_data);
-                match (chain_data) {
+                match chain_data {
                     Ok(data) => {
                         task_entry.data = Some(data);
                         println!("task_entry data saved");
@@ -156,6 +168,7 @@ pub async fn get_chain_data(
     end_block: u64,
     target_address: String,
     client: Arc<Client>,
+    cache: CacheMap,
 ) -> Result<Vec<Log>, Box<dyn Error>> {
     println!("Starting get_chain_data");
 
@@ -175,11 +188,13 @@ pub async fn get_chain_data(
         // );
 
         let client_clone = client.clone();
+        let cache_clone = Arc::clone(&cache);
 
         let handle = tokio::task::spawn(fetch_logs_from_blocks(
             block_to_hex(current_start).to_string(),
             block_to_hex(current_end).to_string(),
             client_clone,
+            cache_clone,
         ));
         handles.push(handle);
 
@@ -220,6 +235,7 @@ async fn fetch_logs_from_blocks(
     start_block: String,
     end_block: String,
     client: Arc<Client>,
+    cache: CacheMap,
 ) -> Result<Vec<Log>, ReqwestError> {
     let payload = serde_json::json!({
         "jsonrpc": "2.0",
@@ -231,9 +247,52 @@ async fn fetch_logs_from_blocks(
         }]
     });
 
-    // dotenv().ok();
+    // todo: check if all target blocks are in cache
+    // if so, return cached data
+    // otherwise, make the api calls to Infura
 
-    // let client = reqwest::Client::new();
+    let mut all_blocks_cached = true;
+    let mut cached_logs: Vec<Log> = Vec::new();
+
+    //scope to limit duration of lock
+    {
+        let cache_map = cache.lock().unwrap();
+
+        println!(
+            "\nChecking cache for blocks {} to {}",
+            start_block, end_block
+        );
+
+        let start_block_num = u64::from_str_radix(start_block.trim_start_matches("0x"), 16)
+            .expect("Failed to parse start block number");
+        let end_block_num = u64::from_str_radix(end_block.trim_start_matches("0x"), 16)
+            .expect("Failed to parse end block number");
+
+        for block in start_block_num..=end_block_num {
+            let block_hex = block_to_hex(block);
+            match cache_map.get(&block_hex) {
+                Some(logs) => {
+                    println!("Found logs for block {} in cache", block_hex);
+                    cached_logs.extend(logs.clone());
+                }
+                None => {
+                    println!("No logs found for block {}", block_hex);
+                    all_blocks_cached = false;
+                    break;
+                }
+            }
+        }
+    }
+
+    if all_blocks_cached {
+        return Ok(cached_logs);
+    }
+
+    // if not all blocks are cached, go fetch
+    println!(
+        "\nFetching logs from Infura for blocks {} to {}",
+        start_block, end_block
+    );
     let infura_url = env::var("INFURA_URL").expect("INFURA_URL must be set");
     let res: Response = client
         .post(&infura_url)
@@ -243,9 +302,49 @@ async fn fetch_logs_from_blocks(
         .json()
         .await?;
 
+    // put fetched results into cache hashmap
+    let logs = res.result.clone();
+    let mut grouped_logs: HashMap<String, Vec<Log>> = HashMap::new();
+
+    for log in logs {
+        grouped_logs
+            .entry(log.blockNumber.clone())
+            .or_insert_with(Vec::new)
+            .push(log);
+    }
+
+    for (block_number, log_group) in grouped_logs {
+        cache.lock().unwrap().insert(block_number, log_group);
+    }
+
     Ok(res.result)
 }
 
 fn block_to_hex(block: u64) -> String {
     format!("0x{:x}", block)
+}
+
+#[get("/check_cache?<block_number>")]
+pub fn check_cache(
+    block_number: String,
+    cache: &State<CacheMap>,
+) -> Result<Json<Vec<Log>>, Status> {
+    print!("Checking cache...");
+    println!("block_number: {}", block_number);
+
+    let block_number_hex = block_to_hex(block_number.parse::<u64>().unwrap());
+
+    let cache_map = cache.inner().lock().unwrap();
+
+    let keys: Vec<_> = cache_map.keys().cloned().collect();
+    let keys_str = keys.join(", ");
+    println!("Cached blocks: {}", keys_str);
+
+    match cache_map.get(&block_number_hex) {
+        Some(logs) => Ok(Json(logs.clone())),
+        None => {
+            println!("No logs found in cache");
+            Err(Status::NotFound)
+        }
+    }
 }

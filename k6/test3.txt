@@ -6,3 +6,4 @@ Same kind (device or os, error trying to connect)
 
 -need to limit number of open connections? tasks?
 -need to limit number of concurrent API requests
+

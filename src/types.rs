@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 pub type TaskMap = Arc<Mutex<HashMap<String, TaskData>>>;
+pub type CacheMap = Arc<Mutex<HashMap<String, Vec<Log>>>>;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum TaskStatus {
@@ -22,6 +23,7 @@ pub struct Log {
     pub address: String,
     pub data: String,
     pub topics: Vec<String>,
+    pub blockNumber: String, //added block number for easier hashmap management
 }
 
 #[derive(Debug, Deserialize)]
