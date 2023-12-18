@@ -5,7 +5,7 @@ use std::env;
 use serde::Serialize;
 
 use std::error::Error;
-use tokio;
+use tokio::{self, task};
 
 use reqwest::{Client, Error as ReqwestError};
 // use serde_json::Value;
@@ -254,19 +254,18 @@ async fn fetch_logs_from_blocks(
     let mut all_blocks_cached = true;
     let mut cached_logs: Vec<Log> = Vec::new();
 
+    println!(
+        "\nChecking cache for blocks {} to {}",
+        start_block, end_block
+    );
+    let start_block_num = u64::from_str_radix(start_block.trim_start_matches("0x"), 16)
+        .expect("Failed to parse start block number");
+    let end_block_num = u64::from_str_radix(end_block.trim_start_matches("0x"), 16)
+        .expect("Failed to parse end block number");
     //scope to limit duration of lock
+    //make sure critical section is made as short as possible
     {
         let cache_map = cache.lock().unwrap();
-
-        println!(
-            "\nChecking cache for blocks {} to {}",
-            start_block, end_block
-        );
-
-        let start_block_num = u64::from_str_radix(start_block.trim_start_matches("0x"), 16)
-            .expect("Failed to parse start block number");
-        let end_block_num = u64::from_str_radix(end_block.trim_start_matches("0x"), 16)
-            .expect("Failed to parse end block number");
 
         for block in start_block_num..=end_block_num {
             let block_hex = block_to_hex(block);
@@ -286,9 +285,10 @@ async fn fetch_logs_from_blocks(
 
     if all_blocks_cached {
         return Ok(cached_logs);
+        // just return results and don't continue with the code below
     }
 
-    // if not all blocks are cached, go fetch
+    // if not all blocks are cached, go fetch and store to cache
     println!(
         "\nFetching logs from Infura for blocks {} to {}",
         start_block, end_block
@@ -314,7 +314,15 @@ async fn fetch_logs_from_blocks(
     }
 
     for (block_number, log_group) in grouped_logs {
-        cache.lock().unwrap().insert(block_number, log_group);
+        let cache_clone = cache.clone(); // Clone the Arc for the cache
+        let block_number_clone = block_number.clone();
+        let log_group_clone = log_group.clone();
+
+        // Spawn an async task for each cache write
+        task::spawn(async move {
+            let mut cache_guard = cache_clone.lock().unwrap();
+            cache_guard.insert(block_number_clone, log_group_clone);
+        });
     }
 
     Ok(res.result)
