@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 mod types;
 use dotenv::dotenv;
+use tokio::sync::Semaphore;
 use types::{CacheMap, TaskMap};
 
 #[launch]
@@ -17,11 +18,13 @@ fn rocket() -> _ {
     dotenv().expect("Cannot load env");
 
     let reqwest_client = Arc::new(reqwest::Client::new());
+    let semaphore = Arc::new(Semaphore::new(10)); //limit concurrent requests
 
     rocket::build()
         .manage(TaskMap::default())
         .manage(reqwest_client)
         .manage(CacheMap::default())
+        .manage(semaphore)
         .mount(
             "/",
             routes![hello_world, fetch_data, check_data, check_cache],

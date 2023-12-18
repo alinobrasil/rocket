@@ -5,7 +5,7 @@ use std::env;
 use serde::Serialize;
 
 use std::error::Error;
-use tokio::{self, task};
+use tokio::{self, sync::Semaphore, task};
 
 use reqwest::{Client, Error as ReqwestError};
 // use serde_json::Value;
@@ -70,6 +70,7 @@ pub fn fetch_data(
     map: &State<TaskMap>,
     client: &State<Arc<Client>>,
     cache: &State<CacheMap>,
+    semaphore: &State<Arc<Semaphore>>,
 ) -> String {
     // println!("\n***RAW block_start: {:?} \n", block_start);
     // println!("\n***RAW block_end: {:?} \n", block_end);
@@ -94,6 +95,7 @@ pub fn fetch_data(
 
     let client_clone = client.inner().clone();
     let cache_clone = cache.inner().clone();
+    let semaphore_clone = semaphore.inner().clone();
 
     let map = map.inner().clone();
 
@@ -121,6 +123,7 @@ pub fn fetch_data(
             _contract_address,
             client_clone,
             cache_clone,
+            semaphore_clone,
         )
         .await;
         // println!("task_id2: {}", task_id2);
@@ -170,6 +173,7 @@ pub async fn get_chain_data(
     target_address: String,
     client: Arc<Client>,
     cache: CacheMap,
+    semaphore: Arc<Semaphore>,
 ) -> Result<Vec<Log>, Box<dyn Error>> {
     println!("Starting get_chain_data");
 
@@ -190,12 +194,14 @@ pub async fn get_chain_data(
 
         let client_clone = client.clone();
         let cache_clone = Arc::clone(&cache);
+        let semaphore_clone = semaphore.clone();
 
         let handle = tokio::task::spawn(fetch_logs_from_blocks(
             block_to_hex(current_start).to_string(),
             block_to_hex(current_end).to_string(),
             client_clone,
             cache_clone,
+            semaphore_clone,
         ));
         handles.push(handle);
 
@@ -237,6 +243,7 @@ async fn fetch_logs_from_blocks(
     end_block: String,
     client: Arc<Client>,
     cache: CacheMap,
+    semaphore: Arc<Semaphore>,
 ) -> Result<Vec<Log>, ReqwestError> {
     let payload = serde_json::json!({
         "jsonrpc": "2.0",
@@ -288,6 +295,9 @@ async fn fetch_logs_from_blocks(
         return Ok(cached_logs);
         // just return results and don't continue with the code below
     }
+
+    let _permit = semaphore.acquire_owned().await.unwrap();
+    // println!("Acquired permit");
 
     // if not all blocks are cached, go fetch and store to cache
     println!(
