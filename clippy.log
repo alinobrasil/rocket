@@ -1,0 +1,70 @@
+a2k@A2K:~/dev/rust/api2$ cargo clippy
+    Checking api2 v0.1.0 (/home/a2k/dev/rust/api2)
+warning: this import is redundant
+ --> src/main.rs:4:1
+  |
+4 | use reqwest;
+  | ^^^^^^^^^^^^ help: remove it entirely
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#single_component_path_imports
+  = note: `#[warn(clippy::single_component_path_imports)]` on by default
+
+warning: unused variable: `e`
+   --> src/routes.rs:139:25
+    |
+139 |                     Err(e) => {
+    |                         ^ help: if this is intentional, prefix it with an underscore: `_e`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unnecessary closure used to substitute value for `Option::None`
+  --> src/routes.rs:80:24
+   |
+80 |     let _block_start = block_start.unwrap_or_else(|| 182770000);
+   |                        ^^^^^^^^^^^^----------------------------
+   |                                    |
+   |                                    help: use `unwrap_or(..)` instead: `unwrap_or(182770000)`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unnecessary_lazy_evaluations
+   = note: `#[warn(clippy::unnecessary_lazy_evaluations)]` on by default
+
+warning: unnecessary closure used to substitute value for `Option::None`
+  --> src/routes.rs:81:22
+   |
+81 |     let _block_end = block_end.unwrap_or_else(|| 182770010);
+   |                      ^^^^^^^^^^----------------------------
+   |                                |
+   |                                help: use `unwrap_or(..)` instead: `unwrap_or(182770010)`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unnecessary_lazy_evaluations
+
+warning: literal with an empty format string
+  --> src/main.rs:16:20
+   |
+16 |     println!("{}", "🚀 The server is ready to accept requests");
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#print_literal
+   = note: `#[warn(clippy::print_literal)]` on by default
+help: try this
+   |
+16 -     println!("{}", "🚀 The server is ready to accept requests");
+16 +     println!("🚀 The server is ready to accept requests");
+   |
+
+warning: variable `reqwestClient` should have a snake case name
+  --> src/main.rs:19:9
+   |
+19 |     let reqwestClient = Arc::new(reqwest::Client::new());
+   |         ^^^^^^^^^^^^^ help: convert the identifier to snake case: `reqwest_client`
+   |
+   = note: `#[warn(non_snake_case)]` on by default
+
+warning: structure field `blockNumber` should have a snake case name
+  --> src/types.rs:26:9
+   |
+26 |     pub blockNumber: String, //added block number for easier hashmap management
+   |         ^^^^^^^^^^^ help: convert the identifier to snake case: `block_number`
+
+warning: `api2` (bin "api2") generated 7 warnings (run `cargo clippy --fix --bin "api2"` to apply 5 suggestions)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.72s

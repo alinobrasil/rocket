@@ -77,8 +77,8 @@ pub fn fetch_data(
     //     let _block_start = block_start.unwrap_or(18277200); // Provide default value here
     //     let _block_end = block_end.unwrap_or(18277300); // Provide default value here
 
-    let _block_start = block_start.unwrap_or_else(|| 182770000);
-    let _block_end = block_end.unwrap_or_else(|| 182770010);
+    let _block_start = block_start.unwrap_or(182770000);
+    let _block_end = block_end.unwrap_or(182770010);
 
     let _contract_address = contract_address
         .unwrap_or_else(|| "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2".to_string()); // Provide default value here
@@ -138,6 +138,7 @@ pub fn fetch_data(
                     }
                     Err(e) => {
                         task_entry.status = TaskStatus::Error;
+                        println!("task_entry error: {}", e)
                     }
                 }
             }

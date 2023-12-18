@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rocket;
 // use rocket::data::Outcome;
-use reqwest;
+// use reqwest;
 
 mod routes;
 use routes::{check_cache, check_data, fetch_data, hello_world};
@@ -13,14 +13,14 @@ use types::{CacheMap, TaskMap};
 
 #[launch]
 fn rocket() -> _ {
-    println!("{}", "🚀 The server is ready to accept requests");
+    println!("🚀 The server is ready to accept requests");
     dotenv().expect("Cannot load env");
 
-    let reqwestClient = Arc::new(reqwest::Client::new());
+    let reqwest_client = Arc::new(reqwest::Client::new());
 
     rocket::build()
         .manage(TaskMap::default())
-        .manage(reqwestClient)
+        .manage(reqwest_client)
         .manage(CacheMap::default())
         .mount(
             "/",
