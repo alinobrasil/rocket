@@ -9,7 +9,8 @@ pub type CacheMap = Arc<Mutex<HashMap<String, Vec<Log>>>>;
 pub enum TaskStatus {
     InProgress,
     Completed,
-    Error,
+    Failed,
+    NotFound,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

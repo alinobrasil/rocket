@@ -1,0 +1,234 @@
+Base # of blocks: 100 ('http://localhost:8000/fetch_data?block_start=18530000&block_end=18530100')
+Run from fresh cargorun
+==> avg run 1.19s
+
+a2k@A2K:~/dev/rust/api2/k6$ k6 run end-to-end.js --duration 10s
+execution: local
+     script: end-to-end.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 1 max VUs, 40s max duration (incl. graceful stop):
+ data_received..................: 27 MB  2.5 MB/s
+     data_sent......................: 4.0 kB 375 B/s
+     http_req_blocked...............: avg=10.88µs min=1.52µs   med=3.75µs  max=130.55µs p(90)=13.39µs  p(95)=20.46µs 
+     http_req_connecting............: avg=2.23µs  min=0s       med=0s      max=60.33µs  p(90)=0s       p(95)=0s      
+     http_req_duration..............: avg=40.98ms min=620.72µs med=14.1ms  max=129.18ms p(90)=125.44ms p(95)=127.46ms
+       { expected_response:true }...: avg=40.98ms min=620.72µs med=14.1ms  max=129.18ms p(90)=125.44ms p(95)=127.46ms
+     http_req_failed................: 0.00%  ✓ 0        ✗ 27 
+     http_req_receiving.............: avg=9.02ms  min=21.2µs   med=70.55µs max=28.58ms  p(90)=27.7ms   p(95)=28.38ms 
+     http_req_sending...............: avg=29.6µs  min=7.03µs   med=21.24µs max=78.12µs  p(90)=56.98µs  p(95)=61.58µs 
+     http_req_tls_handshaking.......: avg=0s      min=0s       med=0s      max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=31.92ms min=573.58µs med=14.05ms max=100.55ms p(90)=98.42ms  p(95)=99.37ms 
+     http_reqs......................: 27     2.511674/s
+     iteration_duration.............: avg=1.19s   min=1.16s    med=1.2s    max=1.22s    p(90)=1.22s    p(95)=1.22s   
+     iterations.....................: 9      0.837225/s
+     vus............................: 1      min=1      max=1
+     vus_max........................: 1      min=1      max=1
+
+
+running (10.7s), 0/1 VUs, 9 complete and 0 interrupted iterations
+
+
+
+============================================
+Increase to 10 VUs
+avg iteration 2.9s
+
+a2k@A2K:~/dev/rust/api2/k6$ k6 run end-to-end.js --duration 10s --vus 10
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: end-to-end.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 10 max VUs, 40s max duration (incl. graceful stop):
+           * default: 10 looping VUs for 10s (gracefulStop: 30s)
+data_received..................: 109 MB 9.8 MB/s
+     data_sent......................: 25 kB  2.2 kB/s
+     http_req_blocked...............: avg=13.17µs min=1.22µs   med=3.89µs  max=453.19µs p(90)=10.82µs  p(95)=63.68µs 
+     http_req_connecting............: avg=4.66µs  min=0s       med=0s      max=335.87µs p(90)=0s       p(95)=35.28µs 
+     http_req_duration..............: avg=37.39ms min=567.91µs med=5.06ms  max=233.26ms p(90)=138.17ms p(95)=153.72ms
+       { expected_response:true }...: avg=37.39ms min=567.91µs med=5.06ms  max=233.26ms p(90)=138.17ms p(95)=153.72ms
+     http_req_failed................: 0.00%  ✓ 0         ✗ 166 
+     http_req_receiving.............: avg=8.25ms  min=12.23µs  med=61.02µs max=49.47ms  p(90)=38.68ms  p(95)=43.8ms  
+     http_req_sending...............: avg=22.94µs min=5.12µs   med=17.79µs max=113.13µs p(90)=46.18µs  p(95)=52.32µs 
+     http_req_tls_handshaking.......: avg=0s      min=0s       med=0s      max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=29.11ms min=513.62µs med=4.94ms  max=191.9ms  p(90)=97.39ms  p(95)=113.85ms
+     http_reqs......................: 166    14.894105/s
+     iteration_duration.............: avg=2.9s    min=1.16s    med=1.29s   max=8.32s    p(90)=7.47s    p(95)=7.69s   
+     iterations.....................: 36     3.230047/s
+     vus............................: 2      min=2       max=10
+     vus_max........................: 10     min=10      max=10
+
+
+running (11.1s), 00/10 VUs, 36 complete and 0 interrupted iterations
+
+================================================
+Increase to 100 VUs
+cargorun from scratch
+
+cache cleary isn't being utilized as it's fetching logs from infura throughout the run. 
+average iteration duration was 18s !
+
+
+a2k@A2K:~/dev/rust/api2/k6$ k6 run end-to-end.js --duration 10s --vus 100
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: end-to-end.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 100 max VUs, 40s max duration (incl. graceful stop):
+           * default: 100 looping VUs for 10s (gracefulStop: 30s)
+
+INFO[0040] ***************************ERROR*************************  source=console
+INFO[0040] ***************************ERROR*************************  source=console
+INFO[0040] Error: {}                                     source=console
+INFO[0040] ***************************ERROR*************************  source=console
+INFO[0040] Error: {}                                     source=console
+INFO[0040] ***************************ERROR*************************  source=console
+INFO[0040] ***************************ERROR*************************  source=console
+INFO[0040] ***************************ERROR*************************  source=console
+
+     data_received..................: 204 MB 5.1 MB/s
+     data_sent......................: 490 kB 12 kB/s
+     http_req_blocked...............: avg=80.54µs  min=869ns    med=2.86µs  max=5.78ms   p(90)=9.29µs  p(95)=13.18µs 
+     http_req_connecting............: avg=72.95µs  min=0s       med=0s      max=5.67ms   p(90)=0s      p(95)=0s      
+     http_req_duration..............: avg=9.64ms   min=288.07µs med=1.49ms  max=349.78ms p(90)=28.31ms p(95)=46.93ms 
+       { expected_response:true }...: avg=9.64ms   min=288.07µs med=1.49ms  max=349.78ms p(90)=28.31ms p(95)=46.93ms 
+     http_req_failed................: 0.00%  ✓ 0         ✗ 3250 
+     http_req_receiving.............: avg=950.62µs min=8.79µs   med=32µs    max=196.69ms p(90)=89.07µs p(95)=118.68µs
+     http_req_sending...............: avg=52.48µs  min=3.31µs   med=12.07µs max=4.16ms   p(90)=40.78µs p(95)=57.08µs 
+     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s      max=0s       p(90)=0s      p(95)=0s      
+     http_req_waiting...............: avg=8.63ms   min=266.22µs med=1.44ms  max=181.7ms  p(90)=28.24ms p(95)=46.58ms 
+     http_reqs......................: 3250   81.247925/s
+     iteration_duration.............: avg=18.14s   min=1.2s     med=16.46s  max=39.47s   p(90)=36.46s  p(95)=37.23s  
+     iterations.....................: 67     1.674957/s
+     vus............................: 47     min=47      max=100
+     vus_max........................: 100    min=100     max=100
+
+
+running (40.0s), 000/100 VUs, 67 complete and 47 interrupted iterations
+default ✓ [======================================] 100 VUs  10s
+
+
+---------------------
+Try again, 100 VUs, but not fresh cargo run. all blocks are already in cache
+average iteration drops to 5s
+
+a2k@A2K:~/dev/rust/api2/k6$ k6 run end-to-end.js --duration 10s --vus 100
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: end-to-end.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 100 max VUs, 40s max duration (incl. graceful stop):
+           * default: 100 looping VUs for 10s (gracefulStop: 30s)
+
+
+     data_received..................: 627 MB 51 MB/s
+     data_sent......................: 83 kB  6.8 kB/s
+     http_req_blocked...............: avg=67.64µs  min=1.05µs   med=5.23µs   max=3.66ms  p(90)=137.18µs p(95)=321.28µs
+     http_req_connecting............: avg=31.18µs  min=0s       med=0s       max=1.78ms  p(90)=77.33µs  p(95)=156.93µs
+     http_req_duration..............: avg=1.18s    min=868.4µs  med=511.02ms max=5.87s   p(90)=4.15s    p(95)=4.57s   
+       { expected_response:true }...: avg=1.18s    min=868.4µs  med=511.02ms max=5.87s   p(90)=4.15s    p(95)=4.57s   
+     http_req_failed................: 0.00%  ✓ 0         ✗ 557  
+     http_req_receiving.............: avg=473.93ms min=16.72µs  med=73.16µs  max=4.66s   p(90)=1.8s     p(95)=2.95s   
+     http_req_sending...............: avg=262.47µs min=5.46µs   med=22.65µs  max=27.44ms p(90)=129.9µs  p(95)=304.05µs
+     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s       max=0s      p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=708.23ms min=818.91µs med=346.33ms max=4.58s   p(90)=2.06s    p(95)=3.03s   
+     http_reqs......................: 557    45.302364/s
+     iteration_duration.............: avg=5.76s    min=2.13s    med=5.77s    max=7.43s   p(90)=7.07s    p(95)=7.11s   
+     iterations.....................: 207    16.835888/s
+     vus............................: 63     min=63      max=100
+     vus_max........................: 100    min=100     max=100
+
+
+running (12.3s), 000/100 VUs, 207 complete and 0 interrupted iterations
+default ✓ [======================================] 100 VUs  10s
+
+========================================================================
+now we know that a lot of concurrent users trying to access the same blocks leads to skipping the cache and repeating api calls.
+
+try 1000 VUs, but not fresh cargo run. all data is already in cache. 
+significantly slower. too slow to complete any run within the duration.
+" No script iterations fully finished, consider making the test duration longer "
+
+new kind of error messages in backend:
+Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >>    >> Remote left: channel closed.
+Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel closed.
+   >> Remote left: channel
+
+
+a2k@A2K:~/dev/rust/api2/k6$ k6 run end-to-end.js --duration 10s --vus 1000
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: end-to-end.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 1000 max VUs, 40s max duration (incl. graceful stop):
+           * default: 1000 looping VUs for 10s (gracefulStop: 30s)
+
+WARN[0041] No script iterations fully finished, consider making the test duration longer 
+
+     data_received..................: 1.4 GB 36 MB/s
+     data_sent......................: 911 kB 23 kB/s
+     http_req_blocked...............: avg=4.51ms   min=1.03µs   med=4.06µs   max=77.8ms  p(90)=29.84ms  p(95)=39.07ms
+     http_req_connecting............: avg=4.4ms    min=0s       med=0s       max=74.15ms p(90)=29.53ms  p(95)=38.64ms
+     http_req_duration..............: avg=1.58s    min=559.03µs med=503.76ms max=29.96s  p(90)=3.88s    p(95)=5.33s  
+       { expected_response:true }...: avg=1.58s    min=559.03µs med=503.76ms max=29.96s  p(90)=3.88s    p(95)=5.33s  
+     http_req_failed................: 0.00%  ✓ 0          ✗ 5066  
+     http_req_receiving.............: avg=49.97µs  min=12.77µs  med=43.7µs   max=3.1ms   p(90)=72.48µs  p(95)=86.98µs
+     http_req_sending...............: avg=278.47µs min=4.63µs   med=18.14µs  max=49.26ms p(90)=761.53µs p(95)=1.11ms 
+     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s       max=0s      p(90)=0s       p(95)=0s     
+     http_req_waiting...............: avg=1.58s    min=518.16µs med=503.66ms max=29.96s  p(90)=3.88s    p(95)=5.33s  
+     http_reqs......................: 5066   124.896736/s
+     vus............................: 1000   min=1000     max=1000
+     vus_max........................: 1000   min=1000     max=1000
+
+
+running (40.6s), 0000/1000 VUs, 0 complete and 1000 interrupted iterations
+default ✓ [======================================] 1000 VUs  10s

@@ -140,7 +140,7 @@ pub fn fetch_data(
                         println!("task_entry data saved");
                     }
                     Err(e) => {
-                        task_entry.status = TaskStatus::Error;
+                        task_entry.status = TaskStatus::Failed;
                         println!("task_entry error: {}", e)
                     }
                 }
@@ -155,15 +155,18 @@ pub fn fetch_data(
 }
 
 #[get("/check_data?<task_id>")]
-pub fn check_data(task_id: Option<String>, map: &State<TaskMap>) -> Result<Json<TaskData>, String> {
+pub fn check_data(task_id: Option<String>, map: &State<TaskMap>) -> Json<TaskData> {
     let _task_id = task_id.unwrap_or_else(|| "invalid string".to_string());
 
     let map = map.inner().lock().unwrap();
 
     if let Some(data) = map.get(&_task_id) {
-        Ok(Json(data.clone())) // Successful match, wrapped in Json
+        Json(data.clone()) // Successful match, wrapped in Json
     } else {
-        Err("Task not found".to_string()) // Error case
+        Json(TaskData {
+            status: TaskStatus::NotFound,
+            data: None,
+        })
     }
 }
 
@@ -296,6 +299,7 @@ async fn fetch_logs_from_blocks(
         // just return results and don't continue with the code below
     }
 
+    // sempaphore to limit number of concurrent requests
     let _permit = semaphore.acquire_owned().await.unwrap();
     // println!("Acquired permit");
 
