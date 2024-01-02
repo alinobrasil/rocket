@@ -9,7 +9,7 @@ export default function () {
     };
 
     // First API call
-    let response = http.get('http://localhost:8000/fetch_data?block_start=18530000&block_end=18530100', apiKeyHeaders);
+    let response = http.get('http://localhost:8000/fetch_data?block_start=18530000&block_end=18530050', apiKeyHeaders);
     // console.log("\n\n Response body********************: ", response.body)
     let task_id = String(response.body)
 
