@@ -1,19 +1,19 @@
 use rocket::request::{self, FromRequest, Request};
 use rocket::{http::Status, serde::json::Json, State};
-use std::env;
-
 use serde::Serialize;
-
+use std::env;
 use std::error::Error;
-use tokio;
+use std::sync::Arc;
+
+use tokio::{self, sync::Semaphore, task};
 
 use reqwest::{Client, Error as ReqwestError};
-// use serde_json::Value;
-use std::sync::Arc;
+
+use crate::types::CustomError;
 
 // use crate::chain_data::get_chain_data;
 
-use crate::types::{CacheMap, Log, Response, TaskData, TaskMap, TaskStatus};
+use crate::types::{CacheMap, Log, MyRateLimiter, Response, TaskData, TaskMap, TaskStatus};
 
 use std::collections::HashMap;
 
@@ -70,6 +70,8 @@ pub fn fetch_data(
     map: &State<TaskMap>,
     client: &State<Arc<Client>>,
     cache: &State<CacheMap>,
+    semaphore: &State<Arc<Semaphore>>,
+    rate_limiter: &State<MyRateLimiter>,
 ) -> String {
     // println!("\n***RAW block_start: {:?} \n", block_start);
     // println!("\n***RAW block_end: {:?} \n", block_end);
@@ -77,8 +79,8 @@ pub fn fetch_data(
     //     let _block_start = block_start.unwrap_or(18277200); // Provide default value here
     //     let _block_end = block_end.unwrap_or(18277300); // Provide default value here
 
-    let _block_start = block_start.unwrap_or_else(|| 182770000);
-    let _block_end = block_end.unwrap_or_else(|| 182770010);
+    let _block_start = block_start.unwrap_or(182770000);
+    let _block_end = block_end.unwrap_or(182770010);
 
     let _contract_address = contract_address
         .unwrap_or_else(|| "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2".to_string()); // Provide default value here
@@ -88,14 +90,18 @@ pub fn fetch_data(
     // println!("contract_address: {}", _contract_address);
 
     let task_id = uuid::Uuid::new_v4().to_string();
+    println!("\n\n------------------------- task_id created: {}", task_id);
 
     let task_id2 = task_id.clone();
     let task_id3 = task_id.clone();
 
     let client_clone = client.inner().clone();
     let cache_clone = cache.inner().clone();
+    let semaphore_clone = semaphore.inner().clone();
 
     let map = map.inner().clone();
+
+    let rate_limiter_clone = rate_limiter.inner().clone();
 
     tokio::spawn(async move {
         let data = TaskData {
@@ -121,6 +127,8 @@ pub fn fetch_data(
             _contract_address,
             client_clone,
             cache_clone,
+            semaphore_clone,
+            rate_limiter_clone,
         )
         .await;
         // println!("task_id2: {}", task_id2);
@@ -137,7 +145,8 @@ pub fn fetch_data(
                         println!("task_entry data saved");
                     }
                     Err(e) => {
-                        task_entry.status = TaskStatus::Error;
+                        task_entry.status = TaskStatus::Failed;
+                        println!("task_entry error: {}", e)
                     }
                 }
             }
@@ -150,25 +159,14 @@ pub fn fetch_data(
     task_id
 }
 
-#[get("/check_data?<task_id>")]
-pub fn check_data(task_id: Option<String>, map: &State<TaskMap>) -> Result<Json<TaskData>, String> {
-    let _task_id = task_id.unwrap_or_else(|| "invalid string".to_string());
-
-    let map = map.inner().lock().unwrap();
-
-    if let Some(data) = map.get(&_task_id) {
-        Ok(Json(data.clone())) // Successful match, wrapped in Json
-    } else {
-        Err("Task not found".to_string()) // Error case
-    }
-}
-
 pub async fn get_chain_data(
     start_block: u64,
     end_block: u64,
     target_address: String,
     client: Arc<Client>,
     cache: CacheMap,
+    semaphore: Arc<Semaphore>,
+    rate_limiter: MyRateLimiter,
 ) -> Result<Vec<Log>, Box<dyn Error>> {
     println!("Starting get_chain_data");
 
@@ -189,12 +187,17 @@ pub async fn get_chain_data(
 
         let client_clone = client.clone();
         let cache_clone = Arc::clone(&cache);
+        let semaphore_clone = semaphore.clone();
+        let rate_limiter_clone = rate_limiter.clone();
 
+        //spawn new task for each batch of blocks
         let handle = tokio::task::spawn(fetch_logs_from_blocks(
             block_to_hex(current_start).to_string(),
             block_to_hex(current_end).to_string(),
             client_clone,
             cache_clone,
+            semaphore_clone,
+            rate_limiter_clone,
         ));
         handles.push(handle);
 
@@ -202,9 +205,13 @@ pub async fn get_chain_data(
     }
 
     let mut matching_logs = Vec::new();
+    const MAX_RETRIES: usize = 3; // Maximum number of retries
+    const RETRY_DELAY: u64 = 1000; // Delay between retries in milliseconds
 
     // Await on the handles to get the results
     for handle in handles {
+        let mut retries = 0;
+
         match handle.await {
             Ok(Ok(logs)) => {
                 // Filter logs based on the specified address and collect them
@@ -217,7 +224,10 @@ pub async fn get_chain_data(
                 println!("# matching entries: {}", filtered_logs.len());
             }
             Ok(Err(e)) => {
+                // TODO: handle specific errors like os error 24.
+
                 println!("Error fetching logs: {}", e);
+                println!("Custom Error Kind: {:?}", e.kind);
                 return Err(Box::new(e));
             }
             Err(e) => {
@@ -236,7 +246,9 @@ async fn fetch_logs_from_blocks(
     end_block: String,
     client: Arc<Client>,
     cache: CacheMap,
-) -> Result<Vec<Log>, ReqwestError> {
+    semaphore: Arc<Semaphore>,
+    rate_limiter: MyRateLimiter,
+) -> Result<Vec<Log>, CustomError> {
     let payload = serde_json::json!({
         "jsonrpc": "2.0",
         "id": 1,
@@ -254,19 +266,18 @@ async fn fetch_logs_from_blocks(
     let mut all_blocks_cached = true;
     let mut cached_logs: Vec<Log> = Vec::new();
 
+    println!(
+        "\nChecking cache for blocks {} to {}",
+        start_block, end_block
+    );
+    let start_block_num = u64::from_str_radix(start_block.trim_start_matches("0x"), 16)
+        .expect("Failed to parse start block number");
+    let end_block_num = u64::from_str_radix(end_block.trim_start_matches("0x"), 16)
+        .expect("Failed to parse end block number");
     //scope to limit duration of lock
+    //make sure critical section is made as short as possible
     {
         let cache_map = cache.lock().unwrap();
-
-        println!(
-            "\nChecking cache for blocks {} to {}",
-            start_block, end_block
-        );
-
-        let start_block_num = u64::from_str_radix(start_block.trim_start_matches("0x"), 16)
-            .expect("Failed to parse start block number");
-        let end_block_num = u64::from_str_radix(end_block.trim_start_matches("0x"), 16)
-            .expect("Failed to parse end block number");
 
         for block in start_block_num..=end_block_num {
             let block_hex = block_to_hex(block);
@@ -286,21 +297,41 @@ async fn fetch_logs_from_blocks(
 
     if all_blocks_cached {
         return Ok(cached_logs);
+        // just return results and don't continue with the code below
     }
 
-    // if not all blocks are cached, go fetch
+    // sempaphore to limit number of concurrent requests
+    // let _permit = semaphore.acquire_owned().await.unwrap();
+    // println!("Acquired permit");
+
+    // if not all blocks are cached, go fetch and store to cache
     println!(
         "\nFetching logs from Infura for blocks {} to {}",
         start_block, end_block
     );
     let infura_url = env::var("INFURA_URL").expect("INFURA_URL must be set");
+
+    // // Acquire the rate limiter lock and perform the check
+    // let is_allowed = {
+    //     let rl = rate_limiter.lock().await;
+    //     rl.check().is_ok()
+    // };
+
+    // if is_allowed {
+    // Wait for the rate limiter's permission before making the API call
+    let mut rate_limiter_guard = rate_limiter.lock().await;
+    rate_limiter_guard.until_ready().await;
+    drop(rate_limiter_guard); // Release the lock
+
     let res: Response = client
         .post(&infura_url)
         .json(&payload)
         .send()
-        .await?
+        .await
+        .map_err(|e| CustomError::network_error())?
         .json()
-        .await?;
+        .await
+        .map_err(|_| CustomError::default_error("Failed to parse JSON response"))?;
 
     // put fetched results into cache hashmap
     let logs = res.result.clone();
@@ -313,15 +344,44 @@ async fn fetch_logs_from_blocks(
             .push(log);
     }
 
+    //asynchronously write to cache, so that taskId can be returned immediately
     for (block_number, log_group) in grouped_logs {
-        cache.lock().unwrap().insert(block_number, log_group);
+        let cache_clone = cache.clone(); // Clone the Arc for the cache
+        let block_number_clone = block_number.clone();
+        let log_group_clone = log_group.clone();
+
+        // Spawn an async task for each cache write
+        task::spawn(async move {
+            let mut cache_guard = cache_clone.lock().unwrap();
+            cache_guard.insert(block_number_clone, log_group_clone);
+        });
     }
 
-    Ok(res.result)
+    return Ok(res.result);
+    // } else {
+    //     println!("Rate limit exceeded");
+    //     return Err(CustomError::rate_limit_exceeded());
+    // }
 }
 
 fn block_to_hex(block: u64) -> String {
     format!("0x{:x}", block)
+}
+
+#[get("/check_data?<task_id>")]
+pub fn check_data(task_id: Option<String>, map: &State<TaskMap>) -> Json<TaskData> {
+    let _task_id = task_id.unwrap_or_else(|| "invalid string".to_string());
+
+    let map = map.inner().lock().unwrap();
+
+    if let Some(data) = map.get(&_task_id) {
+        Json(data.clone()) // Successful match, wrapped in Json
+    } else {
+        Json(TaskData {
+            status: TaskStatus::NotFound,
+            data: None,
+        })
+    }
 }
 
 #[get("/check_cache?<block_number>")]

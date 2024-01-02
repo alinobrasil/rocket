@@ -8,6 +8,6 @@ export default function () {
         },
     };
 
-    http.get('http://localhost:8000/fetch_data?block_start=18530000&block_end=18531000', params);
+    http.get('http://localhost:8000/fetch_data?block_start=18530000&block_end=18535000', params);
     sleep(1);
 }
